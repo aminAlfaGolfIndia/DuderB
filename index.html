@@ -581,18 +581,36 @@ function shuffle(arr){
   return arr;
 }
 
+let germanVoice = null;
+function loadGermanVoice(){
+  if(!("speechSynthesis" in window)) return;
+  const voices = speechSynthesis.getVoices();
+  if(voices.length){
+    germanVoice = voices.find(v => v.lang === "de-DE")
+      || voices.find(v => v.lang && v.lang.toLowerCase().startsWith("de"))
+      || null;
+  }
+}
+loadGermanVoice();
+if("speechSynthesis" in window && "onvoiceschanged" in speechSynthesis){
+  speechSynthesis.onvoiceschanged = loadGermanVoice;
+}
+
+function makeUtterance(text, rate){
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "de-DE";
+  utterance.rate = rate;
+  if(germanVoice) utterance.voice = germanVoice;
+  return utterance;
+}
+
 function speakLetterThenWord(letter, word){
   if(!("speechSynthesis" in window)) return;
   try{
+    if(!germanVoice) loadGermanVoice();
     speechSynthesis.cancel();
-    const letterUtterance = new SpeechSynthesisUtterance(letter);
-    letterUtterance.lang = "de-DE";
-    letterUtterance.rate = 0.8;
-    const wordUtterance = new SpeechSynthesisUtterance(word);
-    wordUtterance.lang = "de-DE";
-    wordUtterance.rate = 0.9;
-    speechSynthesis.speak(letterUtterance);
-    speechSynthesis.speak(wordUtterance);
+    speechSynthesis.speak(makeUtterance(letter, 0.8));
+    speechSynthesis.speak(makeUtterance(word, 0.9));
   }catch(e){}
 }
 

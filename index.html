@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>B oder D? Das Buchstaben-Spiel</title>
+<style>
+  :root{
+    --blue:#2f6fed;
+    --red:#e8483a;
+    --bg1:#fef9e7;
+    --bg2:#d6f0ff;
+    --green:#3cb371;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;height:100%;
+    font-family:'Comic Sans MS','Trebuchet MS',sans-serif;
+    background:linear-gradient(160deg,var(--bg2),var(--bg1));
+    overflow-x:hidden;
+  }
+  .wrap{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:16px;
+  }
+  h1{
+    font-size:clamp(1.4rem,4vw,2.4rem);
+    color:#3a3a5a;
+    text-align:center;
+    margin:8px 0 4px;
+  }
+  .sub{
+    color:#5a5a7a;
+    text-align:center;
+    margin-bottom:10px;
+    font-size:clamp(0.9rem,2.5vw,1.1rem);
+  }
+  .letters-legend{
+    display:flex;
+    gap:18px;
+    margin-bottom:14px;
+    font-weight:bold;
+    font-size:1.3rem;
+  }
+  .legend-b{color:var(--blue);}
+  .legend-d{color:var(--red);}
+
+  .scoreboard{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    background:white;
+    border-radius:30px;
+    padding:10px 22px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.12);
+    margin-bottom:18px;
+  }
+  .score-label{font-size:1.1rem;color:#444;font-weight:bold;}
+  .score-value{
+    font-size:1.6rem;
+    font-weight:900;
+    color:var(--green);
+    min-width:2ch;
+    text-align:center;
+  }
+  .progress-track{
+    position:relative;
+    width:min(90vw,420px);
+    height:22px;
+    background:#e6e6e6;
+    border-radius:20px;
+    overflow:hidden;
+    margin-bottom:6px;
+    box-shadow:inset 0 2px 4px rgba(0,0,0,0.15);
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#3cb371,#2f6fed);
+    transition:width 0.5s ease;
+  }
+  .progress-marker{
+    position:absolute;
+    top:0;
+    width:2px;
+    height:100%;
+    background:rgba(0,0,0,0.35);
+  }
+  .progress-labels{
+    display:flex;
+    justify-content:space-between;
+    width:min(90vw,420px);
+    font-size:0.75rem;
+    color:#666;
+    margin-bottom:14px;
+  }
+
+  .card{
+    background:white;
+    border-radius:28px;
+    padding:26px 20px 30px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.15);
+    width:min(94vw,480px);
+    text-align:center;
+    position:relative;
+  }
+  .picture-box{
+    width:170px;
+    height:170px;
+    margin:0 auto 20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:radial-gradient(circle at 50% 40%,#fffef0,#fff4d6);
+    border-radius:50%;
+    box-shadow:0 6px 16px rgba(0,0,0,0.15);
+  }
+  .picture-box img{
+    width:110px;
+    height:110px;
+  }
+  .picture-box .emoji-fallback{
+    font-size:90px;
+    line-height:1;
+  }
+
+  .prompt{
+    font-size:1.15rem;
+    color:#444;
+    margin-bottom:18px;
+    font-weight:bold;
+  }
+
+  .word-display{
+    font-size:clamp(1.4rem,5vw,2rem);
+    font-weight:800;
+    letter-spacing:1px;
+    margin-bottom:16px;
+    word-break:break-word;
+  }
+  .letter-blank{
+    display:inline-block;
+    width:0.75em;
+    border-bottom:5px solid #999;
+    margin:0 1px;
+  }
+  .letter-blank.revealed{
+    border-bottom-style:none;
+  }
+  .letter-blank.reveal-correct{
+    background:#d9f7e4;
+    border-radius:6px;
+  }
+  .letter-blank.reveal-wrong{
+    background:#ffe1de;
+    border-radius:6px;
+  }
+
+  .options{
+    display:flex;
+    flex-direction:row;
+    justify-content:center;
+    gap:20px;
+  }
+  .option-btn, .letter-btn{
+    font-size:clamp(1.2rem,4vw,1.6rem);
+    font-weight:800;
+    letter-spacing:1px;
+    padding:16px 10px;
+    border-radius:18px;
+    border:3px solid #ccc;
+    background:#fafafa;
+    cursor:pointer;
+    transition:transform 0.12s ease, box-shadow 0.12s ease, background 0.2s;
+    box-shadow:0 4px 0 #d8d8d8;
+  }
+  .letter-btn{
+    width:90px;
+    height:90px;
+    font-size:2.2rem;
+    font-weight:900;
+  }
+  #btnB{ color:var(--blue); border-color:var(--blue); }
+  #btnD{ color:var(--red); border-color:var(--red); }
+  .option-btn:active, .letter-btn:active{
+    transform:translateY(3px);
+    box-shadow:0 1px 0 #d8d8d8;
+  }
+  .option-btn:hover, .letter-btn:hover{background:#f0f4ff;}
+  .option-btn.correct, .letter-btn.correct{
+    background:#d9f7e4 !important;
+    border-color:var(--green) !important;
+    box-shadow:0 4px 0 #2a9a5f !important;
+  }
+  .option-btn.wrong, .letter-btn.wrong{
+    background:#ffe1de !important;
+    border-color:var(--red) !important;
+    box-shadow:0 4px 0 #c8382b !important;
+  }
+  .option-btn:disabled, .letter-btn:disabled{cursor:default;}
+
+  .letter-b{color:var(--blue);}
+  .letter-d{color:var(--red);}
+
+  .feedback{
+    min-height:34px;
+    margin-top:16px;
+    font-size:1.3rem;
+    font-weight:bold;
+  }
+  .feedback.good{color:var(--green);}
+  .feedback.bad{color:var(--red);}
+
+  .win-screen{
+    display:none;
+    text-align:center;
+  }
+  .win-screen.show{display:block;}
+  .win-screen h2{
+    font-size:clamp(1.6rem,5vw,2.4rem);
+    color:var(--green);
+    margin-bottom:10px;
+  }
+  .win-screen .trophy{font-size:5rem;margin-bottom:10px;}
+  .tablet-msg{
+    font-size:1.3rem;
+    background:#fff6cc;
+    border-radius:16px;
+    padding:16px;
+    margin:16px 0;
+    color:#7a5c00;
+    font-weight:bold;
+  }
+  .restart-btn{
+    margin-top:10px;
+    font-size:1.1rem;
+    font-weight:bold;
+    padding:12px 26px;
+    border-radius:16px;
+    border:none;
+    background:var(--blue);
+    color:white;
+    cursor:pointer;
+    box-shadow:0 4px 0 #1d4fb0;
+  }
+  .restart-btn:active{transform:translateY(3px);box-shadow:none;}
+
+  .game-area{display:block;}
+  .game-area.hide{display:none;}
+
+  .confetti{
+    position:fixed;
+    top:-20px;
+    font-size:1.8rem;
+    animation:fall linear forwards;
+    pointer-events:none;
+  }
+  @keyframes fall{
+    to{ transform:translateY(105vh) rotate(360deg); opacity:0.9; }
+  }
+
+  @media (max-width:420px){
+    .picture-box{width:140px;height:140px;}
+    .picture-box img{width:90px;height:90px;}
+    .picture-box .emoji-fallback{font-size:70px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔤 B oder D? 🔤</h1>
+  <div class="sub">Klicke auf das richtige Wort zum Bild!</div>
+  <div class="letters-legend">
+    <span class="legend-b">B b</span>
+    <span class="legend-d">D d</span>
+  </div>
+
+  <div class="scoreboard">
+    <span class="score-label">Punkte:</span>
+    <span class="score-value" id="scoreValue">0</span>
+    <span style="font-size:1.4rem;">⭐</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill"></div>
+    <div class="progress-marker" style="left:8.333%;"></div>
+    <div class="progress-marker" style="left:16.667%;"></div>
+    <div class="progress-marker" style="left:25%;"></div>
+    <div class="progress-marker" style="left:33.333%;"></div>
+    <div class="progress-marker" style="left:41.667%;"></div>
+    <div class="progress-marker" style="left:50%;"></div>
+    <div class="progress-marker" style="left:58.333%;"></div>
+    <div class="progress-marker" style="left:66.667%;"></div>
+    <div class="progress-marker" style="left:75%;"></div>
+    <div class="progress-marker" style="left:83.333%;"></div>
+    <div class="progress-marker" style="left:91.667%;"></div>
+  </div>
+  <div class="progress-labels" style="font-size:0.65rem;">
+    <span>0</span>
+    <span>5</span>
+    <span>10</span>
+    <span>15</span>
+    <span>20</span>
+    <span>25</span>
+    <span>30</span>
+    <span>35</span>
+    <span>40</span>
+    <span>45</span>
+    <span>50</span>
+    <span>55</span>
+    <span>60</span>
+  </div>
+  <div style="font-size:0.7rem; color:#666; margin-top:-10px; margin-bottom:14px;">Minuten Tablet-Zeit</div>
+
+  <div class="card game-area" id="gameArea">
+    <div class="picture-box" id="pictureBox">
+      <img id="pictureImg" alt="" style="display:none;">
+      <span class="emoji-fallback" id="emojiFallback" style="display:none;"></span>
+    </div>
+    <div class="word-display" id="wordDisplay"></div>
+    <div class="prompt">Welcher Buchstabe fehlt?</div>
+    <div class="options" id="options">
+      <button class="letter-btn" id="btnB" data-letter="b">b</button>
+      <button class="letter-btn" id="btnD" data-letter="d">d</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <div class="card win-screen" id="milestoneScreen">
+    <div class="trophy">🌟🎉</div>
+    <h2 id="milestoneTitle">Punkte geschafft!</h2>
+    <p style="font-size:1.1rem;color:#555;">Du hast fantastisch gespielt und viele B's und D's richtig erkannt!</p>
+    <div class="tablet-msg" id="milestoneTabletMsg"></div>
+    <p style="font-size:1.05rem;color:#444;font-weight:bold;">Möchtest du weiterspielen?</p>
+    <div style="display:flex; gap:12px; justify-content:center; margin-top:10px;">
+      <button class="restart-btn" id="continueBtn">Weiterspielen</button>
+      <button class="restart-btn" id="stopBtn" style="background:var(--red); box-shadow:0 4px 0 #a12c22;">Aufhören</button>
+    </div>
+  </div>
+
+  <div class="card win-screen" id="winScreen">
+    <div class="trophy" id="winTrophy">🏆🎉</div>
+    <h2 id="winTitle">Super gemacht!</h2>
+    <p style="font-size:1.1rem;color:#555;" id="winText">Du hast 300 Punkte erreicht und alle B's und D's gemeistert!</p>
+    <div class="tablet-msg" id="winTabletMsg">🎮 Du gewinnst 1 Stunde Tablet-Zeit! 🎮</div>
+    <button class="restart-btn" id="restartBtn">Nochmal spielen</button>
+  </div>
+</div>
+
+<script>
+const TWEMOJI_BASE = "https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/";
+
+const WORDS = [
+  { word: "Zebra",        emoji: "🦓", code: "1f993" },
+  { word: "Robbe",        emoji: "🦭", code: "1f9ad" },
+  { word: "Krabbe",       emoji: "🦀", code: "1f980" },
+  { word: "Zwiebel",      emoji: "🧅", code: "1f9c5" },
+  { word: "Kürbis",       emoji: "🎃", code: "1f383" },
+  { word: "Traube",       emoji: "🍇", code: "1f347" },
+  { word: "Sonnenblume",  emoji: "🌻", code: "1f33b" },
+  { word: "Volleyball",   emoji: "🏐", code: "1f3d0" },
+  { word: "Hubschrauber", emoji: "🚁", code: "1f681" },
+  { word: "Skateboard",   emoji: "🛹", code: "1f6f9" },
+  { word: "Sandburg",     emoji: "🏰", code: "1f3f0" },
+  { word: "Fußball",      emoji: "⚽", code: "26bd" },
+  { word: "Hemd",         emoji: "👕", code: "1f455" },
+  { word: "Handball",     emoji: "🤾", code: "1f93e" },
+  { word: "Schwimmbad",   emoji: "🏊", code: "1f3ca" },
+  { word: "Waschbär",     emoji: "🦝", code: "1f99d" },
+  { word: "Regenbogen",   emoji: "🌈", code: "1f308" },
+  { word: "Wald",         emoji: "🌲", code: "1f332" },
+  { word: "Strand",       emoji: "🏖️", code: "1f3d6" },
+  { word: "Herd",         emoji: "🍳", code: "1f373" },
+  { word: "Straßenbahn",  emoji: "🚊", code: "1f68a" },
+  { word: "Ordner",       emoji: "📁", code: "1f4c1" },
+  { word: "Kalender",     emoji: "📅", code: "1f4c5" },
+  { word: "Radio",        emoji: "📻", code: "1f4fb" },
+  { word: "Sandale",      emoji: "👡", code: "1f461" },
+  { word: "Feder",        emoji: "🪶", code: "1fab6" },
+  { word: "Adler",        emoji: "🦅", code: "1f985" },
+  { word: "Pudel",        emoji: "🐩", code: "1f429" },
+  { word: "Panda",        emoji: "🐼", code: "1f43c" },
+  { word: "Nudeln",       emoji: "🍜", code: "1f35c" },
+  { word: "Pudding",      emoji: "🍮", code: "1f36e" },
+  { word: "Kleid",        emoji: "👗", code: "1f457" },
+  { word: "Handtasche",   emoji: "👜", code: "1f45c" },
+  { word: "Sandwich",     emoji: "🥪", code: "1f96a" },
+  { word: "Erdbeere",     emoji: "🍓", code: "1f353" },
+  { word: "Erdnuss",      emoji: "🥜", code: "1f95c" },
+  { word: "Erde",         emoji: "🌍", code: "1f30d" },
+  { word: "Nadel",        emoji: "🪡", code: "1faa1" },
+  { word: "Faden",        emoji: "🧵", code: "1f9f5" },
+  { word: "Handschuh",    emoji: "🧤", code: "1f9e4" },
+  { word: "Krokodil",     emoji: "🐊", code: "1f40a" },
+  { word: "Schildkröte",  emoji: "🐢", code: "1f422" },
+  { word: "Fledermaus",   emoji: "🦇", code: "1f987" },
+  { word: "Pferd",        emoji: "🐴", code: "1f434" },
+  { word: "Motorrad",     emoji: "🏍️", code: "1f3cd" },
+  { word: "Schokolade",   emoji: "🍫", code: "1f36b" },
+  { word: "Eidechse", emoji: "🦎", code: "1f98e" },
+  { word: "Wildschwein", emoji: "🐗", code: "1f417" },
+  { word: "Gummibärchen", emoji: "🐻", code: "1f43b" },
+  { word: "Mandarine", emoji: "🍊", code: "1f34a" },
+  { word: "Limonade", emoji: "🥤", code: "1f964" },
+  { word: "Handy", emoji: "📱", code: "1f4f1" },
+  { word: "Gemälde", emoji: "🖼️", code: "1f5bc" },
+  { word: "Teddybär", emoji: "🧸", code: "1f9f8" },
+  { word: "Frisbee", emoji: "🥏", code: "1f94f" },
+  { word: "Ruderboot", emoji: "🚣", code: "1f6a3" },
+  { word: "Federball", emoji: "🏸", code: "1f3f8" },
+  { word: "Rodeln", emoji: "🛷", code: "1f6f7" },
+  { word: "Medaille", emoji: "🏅", code: "1f3c5" },
+  { word: "Landkarte", emoji: "🗺️", code: "1f5fa" },
+  { word: "Mund", emoji: "👄", code: "1f444" },
+  { word: "Hand", emoji: "✋", code: "270b" },
+  { word: "Kind", emoji: "🧒", code: "1f9d2" },
+  { word: "Freund", emoji: "🤝", code: "1f91d" },
+  { word: "Mond", emoji: "🌙", code: "1f319" },
+  { word: "Feld", emoji: "🌾", code: "1f33e" },
+  { word: "Akkordeon", emoji: "🪗", code: "1fa97" },
+  { word: "Geldbeutel", emoji: "👛", code: "1f45b" },
+  { word: "Geld", emoji: "💰", code: "1f4b0" },
+  { word: "Luftballon", emoji: "🎈", code: "1f388" },
+  { word: "Glühbirne", emoji: "💡", code: "1f4a1" },
+  { word: "Kabel", emoji: "🔌", code: "1f50c" },
+  { word: "Verband", emoji: "🩹", code: "1fa79" },
+  { word: "Tablette", emoji: "💊", code: "1f48a" },
+  { word: "Zahnbürste", emoji: "🪥", code: "1faa5" },
+  { word: "Roboter", emoji: "🤖", code: "1f916" },
+  { word: "Nilpferd", emoji: "🦛", code: "1f99b" },
+  { word: "Widder", emoji: "🐏", code: "1f40f" },
+  { word: "Gabel", emoji: "🍴", code: "1f374" },
+  { word: "Fabrik", emoji: "🏭", code: "1f3ed" },
+  { word: "Cowboy", emoji: "🤠", code: "1f920" },
+  { word: "Quadrat", emoji: "⬛", code: "2b1b" },
+  { word: "Geldschein", emoji: "💵", code: "1f4b5" },
+  { word: "Geburtstag", emoji: "🎂", code: "1f382" },
+  { word: "Herbst", emoji: "🍂", code: "1f342" },
+  { word: "Schwimmbrille", emoji: "🥽", code: "1f97d" },
+  { word: "Turteltaube", emoji: "🕊️", code: "1f54a" },
+  { word: "Hotdog", emoji: "🌭", code: "1f32d" },
+  { word: "Cheeseburger", emoji: "🍔", code: "1f354" },
+  { word: "Kebab", emoji: "🥙", code: "1f959" },
+  { word: "Honigbrot", emoji: "🍞", code: "1f35e" },
+  { word: "Müdigkeit", emoji: "😴", code: "1f634" },
+  { word: "Überraschung", emoji: "😲", code: "1f632" },
+  { word: "Geschenkband", emoji: "🎀", code: "1f380" },
+  { word: "Kleeblatt", emoji: "🍀", code: "1f340" },
+  { word: "Obstbaum", emoji: "🌳", code: "1f333" },
+  { word: "Leopard", emoji: "🐆", code: "1f406" },
+  { word: "Fußabdruck", emoji: "🐾", code: "1f43e" },
+  { word: "Straßenschild", emoji: "🪧", code: "1faa7" },
+  { word: "Zebrastreifen", emoji: "🚸", code: "1f6b8" },
+  { word: "Wanderschuh", emoji: "🥾", code: "1f97e" },
+  { word: "Fußballtor", emoji: "🥅", code: "1f945" },
+  { word: "Zeichenblock", emoji: "📓", code: "1f4d3" },
+  { word: "Notizbuch", emoji: "📔", code: "1f4d4" },
+  { word: "Tagebuch", emoji: "📕", code: "1f4d5" },
+  { word: "Adressbuch", emoji: "📗", code: "1f4d7" },
+  { word: "Wörterbuch", emoji: "📘", code: "1f4d8" },
+  { word: "Kochbuch", emoji: "📙", code: "1f4d9" },
+  { word: "Schulbuch", emoji: "📚", code: "1f4da" },
+  { word: "Riesenrad", emoji: "🎡", code: "1f3a1" },
+  { word: "Achterbahn", emoji: "🎢", code: "1f3a2" },
+  { word: "Zauberstab", emoji: "🪄", code: "1fa84" },
+  { word: "Weihnachtsbaum", emoji: "🎄", code: "1f384" },
+  { word: "Wasserball", emoji: "🤽", code: "1f93d" },
+  { word: "Rugby", emoji: "🏉", code: "1f3c9" },
+  { word: "Fahrradhelm", emoji: "⛑️", code: "26d1" },
+  { word: "Sonnenbrille", emoji: "🕶️", code: "1f576" },
+  { word: "Fahrradklingel", emoji: "🔔", code: "1f514" },
+  { word: "Handstand", emoji: "🤸", code: "1f938" },
+  { word: "Fahrradschloss", emoji: "🔒", code: "1f512" },
+];
+
+const MILESTONES = [
+  { score: 150, minutes: 15 },
+  { score: 300, minutes: 30 },
+  { score: 600, minutes: 60 },
+];
+const FINAL_SCORE = MILESTONES[MILESTONES.length - 1].score;
+const POINTS_PER_ANSWER = 5;
+
+let score = 0;
+let currentCorrectWord = null;
+let locked = false;
+let milestoneIndex = 0;
+let pendingMilestoneMinutes = 0;
+let deck = [];
+let currentCorrectLetter = null;
+let currentBlankIndex = -1;
+
+const scoreValueEl = document.getElementById("scoreValue");
+const progressFillEl = document.getElementById("progressFill");
+const pictureBoxEl = document.getElementById("pictureBox");
+const pictureImgEl = document.getElementById("pictureImg");
+const emojiFallbackEl = document.getElementById("emojiFallback");
+const wordDisplayEl = document.getElementById("wordDisplay");
+const optionsEl = document.getElementById("options");
+const btnB = document.getElementById("btnB");
+const btnD = document.getElementById("btnD");
+const feedbackEl = document.getElementById("feedback");
+const gameAreaEl = document.getElementById("gameArea");
+const winScreenEl = document.getElementById("winScreen");
+const milestoneScreenEl = document.getElementById("milestoneScreen");
+const milestoneTitleEl = document.getElementById("milestoneTitle");
+const milestoneTabletMsgEl = document.getElementById("milestoneTabletMsg");
+const restartBtn = document.getElementById("restartBtn");
+const continueBtn = document.getElementById("continueBtn");
+const stopBtn = document.getElementById("stopBtn");
+const winTrophyEl = document.getElementById("winTrophy");
+const winTitleEl = document.getElementById("winTitle");
+const winTextEl = document.getElementById("winText");
+const winTabletMsgEl = document.getElementById("winTabletMsg");
+
+function formatMinutes(min){
+  return min >= 60 ? "1 Stunde" : min + " Minuten";
+}
+
+function renderPicture(item){
+  pictureImgEl.onerror = () => {
+    pictureImgEl.style.display = "none";
+    emojiFallbackEl.style.display = "block";
+  };
+  pictureImgEl.onload = () => {
+    pictureImgEl.style.display = "block";
+    emojiFallbackEl.style.display = "none";
+  };
+  pictureImgEl.alt = item.word;
+  pictureImgEl.src = TWEMOJI_BASE + item.code + ".svg";
+  emojiFallbackEl.textContent = item.emoji;
+}
+
+function letterClass(ch){
+  if(ch === "b" || ch === "B") return "letter-b";
+  if(ch === "d" || ch === "D") return "letter-d";
+  return "";
+}
+
+function findBlankableIndices(word){
+  const indices = [];
+  for(let i=0;i<word.length;i++){
+    if(word[i] === "b" || word[i] === "B" || word[i] === "d" || word[i] === "D"){
+      indices.push(i);
+    }
+  }
+  return indices;
+}
+
+function renderWordDisplay(word, blankIndex, revealState){
+  wordDisplayEl.innerHTML = word.split("").map((ch, i)=>{
+    if(i === blankIndex){
+      const revealCls = revealState === "correct" ? "reveal-correct" : revealState === "wrong" ? "reveal-wrong" : "";
+      if(revealState){
+        return `<span class="letter-blank revealed ${revealCls} ${letterClass(ch)}">${ch}</span>`;
+      }
+      return `<span class="letter-blank">&nbsp;</span>`;
+    }
+    const cls = letterClass(ch);
+    return cls ? `<span class="${cls}">${ch}</span>` : ch;
+  }).join("");
+}
+
+function buildDeck(){
+  const fresh = [...WORDS];
+  shuffle(fresh);
+  return fresh;
+}
+
+function drawFromDeck(){
+  return deck.pop();
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function speakLetterThenWord(letter, word){
+  if(!("speechSynthesis" in window)) return;
+  try{
+    speechSynthesis.cancel();
+    const letterUtterance = new SpeechSynthesisUtterance(letter);
+    letterUtterance.lang = "de-DE";
+    letterUtterance.rate = 0.8;
+    const wordUtterance = new SpeechSynthesisUtterance(word);
+    wordUtterance.lang = "de-DE";
+    wordUtterance.rate = 0.9;
+    speechSynthesis.speak(letterUtterance);
+    speechSynthesis.speak(wordUtterance);
+  }catch(e){}
+}
+
+function playTone(freq, duration, type="sine"){
+  try{
+    const ctx = playTone.ctx || (playTone.ctx = new (window.AudioContext || window.webkitAudioContext)());
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  }catch(e){}
+}
+
+function playCorrectSound(){
+  playTone(523.25, 0.15);
+  setTimeout(()=>playTone(659.25, 0.18),120);
+  setTimeout(()=>playTone(783.99, 0.22),260);
+}
+function playWrongSound(){
+  playTone(200, 0.3, "sawtooth");
+}
+
+function updateScore(){
+  scoreValueEl.textContent = score;
+  const pct = Math.min(100, (score / FINAL_SCORE) * 100);
+  progressFillEl.style.width = pct + "%";
+}
+
+function newRound(){
+  if(deck.length === 0){
+    endGameOutOfPictures();
+    return;
+  }
+
+  locked = false;
+  feedbackEl.textContent = "";
+  feedbackEl.className = "feedback";
+
+  const correctItem = drawFromDeck();
+  currentCorrectWord = correctItem.word;
+  renderPicture(correctItem);
+
+  const blankable = findBlankableIndices(correctItem.word);
+  currentBlankIndex = blankable[Math.floor(Math.random() * blankable.length)];
+  currentCorrectLetter = correctItem.word[currentBlankIndex].toLowerCase();
+  renderWordDisplay(correctItem.word, currentBlankIndex, null);
+
+  [btnB, btnD].forEach(b=>{
+    b.disabled = false;
+    b.classList.remove("correct", "wrong");
+  });
+}
+
+function spawnConfetti(){
+  const emojis = ["🎉","🎊","⭐","🏆","🎈"];
+  for(let i=0;i<40;i++){
+    const el = document.createElement("div");
+    el.className = "confetti";
+    el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    el.style.left = Math.random()*100 + "vw";
+    el.style.animationDuration = (2 + Math.random()*2) + "s";
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 4200);
+  }
+}
+
+function handleLetterAnswer(letter, btn){
+  if(locked) return;
+
+  if(letter === currentCorrectLetter){
+    locked = true;
+    [btnB, btnD].forEach(b=>b.disabled = true);
+    btn.classList.add("correct");
+    renderWordDisplay(currentCorrectWord, currentBlankIndex, "correct");
+    score += POINTS_PER_ANSWER;
+    feedbackEl.textContent = "Richtig! Super gemacht! 🎉";
+    feedbackEl.className = "feedback good";
+    playCorrectSound();
+    updateScore();
+    afterRoundEnd(1300);
+    return;
+  }
+
+  playWrongSound();
+
+  locked = true;
+  [btnB, btnD].forEach(b=>b.disabled = true);
+  btn.classList.add("wrong");
+  score = Math.max(0, score - POINTS_PER_ANSWER);
+  renderWordDisplay(currentCorrectWord, currentBlankIndex, "wrong");
+  feedbackEl.textContent = "Das war leider falsch. Richtig ist: " + currentCorrectLetter;
+  feedbackEl.className = "feedback bad";
+  updateScore();
+  afterRoundEnd(3000);
+}
+
+function afterRoundEnd(delay){
+  if(milestoneIndex < MILESTONES.length && score >= MILESTONES[milestoneIndex].score){
+    const milestone = MILESTONES[milestoneIndex];
+    const isFinal = milestoneIndex === MILESTONES.length - 1;
+    milestoneIndex++;
+    setTimeout(()=>{
+      if(isFinal){
+        showFinalScreen({
+          trophy: "🏆🎉",
+          title: "Fantastisch, du hast gewonnen!",
+          text: `Du hast ${FINAL_SCORE} Punkte erreicht und alle B's und D's gemeistert!`,
+          tabletMsg: `🎮 Du gewinnst ${formatMinutes(milestone.minutes)} Tablet-Zeit! 🎮`
+        });
+      } else {
+        pendingMilestoneMinutes = milestone.minutes;
+        milestoneTitleEl.textContent = `${milestone.score} Punkte geschafft!`;
+        milestoneTabletMsgEl.textContent = `🎮 Du hast ${formatMinutes(milestone.minutes)} Tablet-Zeit gewonnen! 🎮`;
+        gameAreaEl.classList.add("hide");
+        milestoneScreenEl.classList.add("show");
+        spawnConfetti();
+      }
+    }, delay);
+  } else {
+    setTimeout(newRound, delay);
+  }
+}
+
+function minutesEarnedSoFar(){
+  return milestoneIndex > 0 ? MILESTONES[milestoneIndex - 1].minutes : 0;
+}
+
+function endGameOutOfPictures(){
+  const minutes = minutesEarnedSoFar();
+  showFinalScreen({
+    trophy: "🎉👏",
+    title: "Alle Bilder geschafft!",
+    text: `Du hast alle ${WORDS.length} Bilder gesehen und ${score} Punkte erreicht!`,
+    tabletMsg: minutes > 0
+      ? `🎮 Du gewinnst ${formatMinutes(minutes)} Tablet-Zeit! 🎮`
+      : "Spiel noch mal, um Tablet-Zeit zu gewinnen! 💪"
+  });
+}
+
+function showFinalScreen(cfg){
+  winTrophyEl.textContent = cfg.trophy;
+  winTitleEl.textContent = cfg.title;
+  winTextEl.textContent = cfg.text;
+  winTabletMsgEl.textContent = cfg.tabletMsg;
+  gameAreaEl.classList.add("hide");
+  milestoneScreenEl.classList.remove("show");
+  winScreenEl.classList.add("show");
+  spawnConfetti();
+}
+
+btnB.addEventListener("click", ()=>{
+  speakLetterThenWord("b", currentCorrectWord);
+  handleLetterAnswer("b", btnB);
+});
+btnD.addEventListener("click", ()=>{
+  speakLetterThenWord("d", currentCorrectWord);
+  handleLetterAnswer("d", btnD);
+});
+
+continueBtn.addEventListener("click", ()=>{
+  milestoneScreenEl.classList.remove("show");
+  gameAreaEl.classList.remove("hide");
+  newRound();
+});
+
+stopBtn.addEventListener("click", ()=>{
+  showFinalScreen({
+    trophy: "🌟🎉",
+    title: "Super gemacht!",
+    text: "Du hast super gespielt und viele B's und D's gemeistert!",
+    tabletMsg: `🎮 Du gewinnst ${formatMinutes(pendingMilestoneMinutes)} Tablet-Zeit! 🎮`
+  });
+});
+
+restartBtn.addEventListener("click", ()=>{
+  score = 0;
+  milestoneIndex = 0;
+  deck = buildDeck();
+  updateScore();
+  winScreenEl.classList.remove("show");
+  milestoneScreenEl.classList.remove("show");
+  gameAreaEl.classList.remove("hide");
+  newRound();
+});
+
+updateScore();
+deck = buildDeck();
+newRound();
+</script>
+</body>
+</html>
